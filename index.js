@@ -2,6 +2,15 @@ const puppeteer = require('puppeteer');
 const moment = require('moment');
 const CREDS = require('./creds');
 
+function delay(timeout) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, timeout);
+    });
+}
+function resolveThen() {
+    return [(res)=>console.log('resolved'),(err)=>console.log('error')];
+}
+
 
 async function run() {
     //const browser = await puppeteer.launch();
@@ -26,6 +35,37 @@ async function run() {
     const CONTINUE_SELECTOR = '#ctl00_SheetContentPlaceHolder_btnContinue';
     const PAY_WITH_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_btnAddCreditCard';
     const CARD_TYPE_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_drpCardType_drpCardNames';
+    const lotList = {
+        livi: '2180',
+        busch: '2178',
+        doug: '2179',
+        cook: '2181',
+    }
+
+    // PAYMENT ADDRESS SECTION
+    const FIRST_NAME_ON_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtFirstNameOnCard';
+    const LAST_NAME_ON_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtLastNameOnCard';
+    const CARD_NUMBER_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtCardNumber';
+    const CONFIRM_CARD_NUMBER_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtConfirmCardNumber';
+    const CVV2_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtCVV2';
+    // values 1-12 for each month
+    const EXPIRATION_MONTH_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_drpMonth';
+    // values are 4 digit representing a year
+    const EXPIRATION_YEAR_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_drpYear';
+
+    // CARD BILLING ADDRESS SECTION
+    const FIRST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtBillingFirstName';
+    const LAST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtBillingLastName';
+    const ADDRESS_LINE_1_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtAddLine1';
+    const CITY_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtCity';
+    const ZIPCODE_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtZip';
+
+    // value set to 'NJ'
+    const STATE_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_drpStates_drpStates';
+    // DEFAULTS TO UNITED STATES
+    const COUNTRY_DROPDOWN_SELECTOR = '';
+
+
 
     await page.click(USERNAME_SELECTOR);
     await page.keyboard.type(CREDS.username);
@@ -35,8 +75,7 @@ async function run() {
 
     await page.click(LOGIN_BUTTON_SELECTOR);
     await page.waitForNavigation();
-
-
+    console.log('Get Permit')
     await page.click(GET_PERMIT_BUTTON_SELECTOR);
     await page.waitForSelector(NEXT_BUTTON_SELECTOR);
 
@@ -64,8 +103,6 @@ async function run() {
     }
 
     let today = moment().format('MMMM D');
-    //let today = "February 1";
-
 
     let indexes = await page.evaluate(today => {
         let trs = document.querySelectorAll('#ctl00_ctl01_MainContentPlaceHolder_T2Main_calEffectiveDate > tbody > tr');
@@ -114,42 +151,115 @@ async function run() {
     await page.click(NEXT_BUTTON_SELECTOR);
     await page.waitForSelector(NEXT_BUTTON_SELECTOR);
 
+    // unchecking extra vehicles
+    await page.click('#ctl00_ctl01_MainContentPlaceHolder_T2Main_dgVehicleList_ctl03_chkChooseVehicles')
+        .then(...resolveThen());
+    await page.click('#ctl00_ctl01_MainContentPlaceHolder_T2Main_dgVehicleList_ctl04_chkChooseVehicles')
+        .then(...resolveThen());
+
     await page.click(NEXT_BUTTON_SELECTOR);
     await page.waitForSelector(NEXT_BUTTON_SELECTOR);
 
 
     console.log("Choose the Location")
-    await page.select(LOT_INPUT_SELECTOR,'2180');
+    // livi, busch, doug, cook
+    await page.select(LOT_INPUT_SELECTOR,lotList.livi);
     await page.waitForSelector(NEXT_BUTTON_SELECTOR);
     await page.click(NEXT_BUTTON_SELECTOR);
     await page.waitForSelector(PAY_NOW_SELECTOR);
     console.log("View Cart Pay now")
 
     await page.click(PAY_NOW_SELECTOR);
+    console.log("View Cart Pay now 2")
     await page.waitForSelector('input');
+    console.log("View Cart Pay now 3")
+    await page.waitForSelector('input');
+    console.log("View Cart Pay now 4")
 
     await page.click('#cmdNext');
+    console.log("View Cart Pay now 5")
+    await page.waitForSelector('input');
+    console.log("View Cart Pay now 6")
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
     await page.waitForSelector(CONTINUE_SELECTOR);
-
+    await page.focus(CONTINUE_SELECTOR);
     await page.click(CONTINUE_SELECTOR);
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
+    console.log("View Cart Pay now 7")
+    /*
+    await page.evaluate((contSelector) => {
+        console.log(contSelector)
+        let input = document.getElementById(contSelector);
+        console.log(input,'input')
+        input.click();
+    },CONTINUE_SELECTOR);
+    */
+    console.log("View Cart Pay now 8")
+    console.log("View Cart Pay now 9")
     console.log("Check out process order details")
     await page.waitForSelector(PAY_WITH_CARD_SELECTOR);
     await page.click(PAY_WITH_CARD_SELECTOR);
-    await page.waitForSelector('input');
-
+    await page.waitForSelector(CARD_TYPE_DROPDOWN_SELECTOR);
+    console.log("payment");
     await page.select(CARD_TYPE_DROPDOWN_SELECTOR,'V');
-    /*
-    const SELECT_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_drpCardType_btnSelectCard';
-    await page.click(SELECT_CARD_SELECTOR);
-    await page.waitForSelector('input');
-    */
-    
 
+    // add code for adding card info & billing address info
+
+    // CARD INFO
+    await page.click(FIRST_NAME_ON_CARD_SELECTOR);
+    await page.keyboard.type(CREDS.bkooCard.firstName);
+
+    await page.click(LAST_NAME_ON_CARD_SELECTOR);
+    await page.keyboard.type(CREDS.bkooCard.lastName);
+
+    await page.click(CARD_NUMBER_SELECTOR);
+    await page.keyboard.type(CREDS.bkooCard.cardNumber);
+
+    await page.click(CONFIRM_CARD_NUMBER_SELECTOR);
+    await page.keyboard.type(CREDS.bkooCard.cardNumber);
+
+    await page.click(CVV2_SELECTOR);
+    await page.keyboard.type(CREDS.bkooCard.cvv2);
+
+    await page.select(EXPIRATION_MONTH_DROPDOWN_SELECTOR,CREDS.bkooCard.expirationMonth);;
+
+    await page.select(EXPIRATION_YEAR_DROPDOWN_SELECTOR,CREDS.bkooCard.expirationYear);;
+
+    // BILLING ADDRESS
+    await page.click(FIRST_NAME_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.firstName);
+
+    await page.click(LAST_NAME_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.lastName);
+
+    await page.click(ADDRESS_LINE_1_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.address);
+
+    await page.click(CITY_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.city);
+
+    await page.click(ZIPCODE_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.zipCode);
+
+    await page.select(STATE_DROPDOWN_SELECTOR,'NJ');
+
+    // wait to see what i typed REMOVE ON PRODUCTION
+    await page.waitForNavigation({timeout: 5000}).then(...resolveThen());
+
+    await page.focus(CONTINUE_SELECTOR);
+    await page.click(CONTINUE_SELECTOR);
+
+    console.log('order summary');
+
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
+
+    await page.focus(CONTINUE_SELECTOR);
+    await page.click(CONTINUE_SELECTOR);
+
+    console.log('order confirmation')
+    
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
     }
 
-
-
-
-
-    //browser.close();
 run();
+//browser.close();
