@@ -7,8 +7,8 @@ function delay(timeout) {
       setTimeout(resolve, timeout);
     });
 }
-function resolveThen() {
-    return [(res)=>console.log('resolved'),(err)=>console.log('error')];
+function resolveThen(line = -1) {
+    return [(res)=>console.log(`resolved ${line}`),(err)=>console.log(`error ${line}`)];
 }
 
 
@@ -42,28 +42,36 @@ async function run() {
         cook: '2181',
     }
 
-    // PAYMENT ADDRESS SECTION
-    const FIRST_NAME_ON_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtFirstNameOnCard';
-    const LAST_NAME_ON_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtLastNameOnCard';
-    const CARD_NUMBER_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtCardNumber';
-    const CONFIRM_CARD_NUMBER_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtConfirmCardNumber';
-    const CVV2_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtCVV2';
+    // PAYMENT ADDRESS SECTION 
+    // NEED TO REWRITE I FOUND SELECTORS AFTER I CLICK EDIT CC
+    const FIRST_NAME_ON_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtFirstNameOnCard';
+    const LAST_NAME_ON_CARD_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtLastNameOnCard';
+    const CARD_NUMBER_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtCardNumber';
+    const CONFIRM_CARD_NUMBER_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtConfirmCardNumber';
+    const CVV2_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtCVV2';
     // values 1-12 for each month
-    const EXPIRATION_MONTH_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_drpMonth';
+    const EXPIRATION_MONTH_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_drpMonth';
     // values are 4 digit representing a year
-    const EXPIRATION_YEAR_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_drpYear';
+    const EXPIRATION_YEAR_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_drpYear';
 
     // CARD BILLING ADDRESS SECTION
-    const FIRST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtBillingFirstName';
-    const LAST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtBillingLastName';
-    const ADDRESS_LINE_1_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtAddLine1';
-    const CITY_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtCity';
-    const ZIPCODE_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_txtZip';
+    const FIRST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtBillingFirstName';
+    const LAST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtBillingLastName';
+    const ADDRESS_LINE_1_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtAddLine1';
+    const CITY_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtCity';
+    const ZIPCODE_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_txtZip';
 
     // value set to 'NJ'
-    const STATE_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_editCreditCard_drpStates_drpStates';
+    const STATE_DROPDOWN_SELECTOR = '#ctl00_SheetContentPlaceHolder_AddCreditCard1_drpStates_drpStates';
     // DEFAULTS TO UNITED STATES
     const COUNTRY_DROPDOWN_SELECTOR = '';
+
+    const ACCOUNT_AUTHORIZATION_CHECKBOX_SELECTOR = '#ctl00_SheetContentPlaceHolder_TxtAuthorization1_chk_agree';
+    const ACCOUNT_AUTHORIZATION_EMAIL_ADDRESS_SELECTOR = '#ctl00_SheetContentPlaceHolder_txtEmail';
+    const ACCOUNT_AUTHORIZATION_CONFIRM_EMAIL_ADDRESS_SELECTOR = '#ctl00_SheetContentPlaceHolder_txtEmailConfirm';
+    const ACCOUNT_AUTHORIZATION_FIRST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_txtFirstName';
+    const ACCOUNT_AUTHORIZATION_LAST_NAME_SELECTOR = '#ctl00_SheetContentPlaceHolder_txtLastName';
+    const ACCOUNT_AUTHORIZATION_SUBMIT_ORDER_SELECTOR = '#ctl00_SheetContentPlaceHolder_btnPlaceOrder';
 
 
 
@@ -74,7 +82,7 @@ async function run() {
     await page.keyboard.type(CREDS.password);
 
     await page.click(LOGIN_BUTTON_SELECTOR);
-    await page.waitForNavigation();
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen(85));
     console.log('Get Permit')
     await page.click(GET_PERMIT_BUTTON_SELECTOR);
     await page.waitForSelector(NEXT_BUTTON_SELECTOR);
@@ -87,7 +95,7 @@ async function run() {
 
     await page.click(AGREE_CHECKBOX_SELECTOR);
     await page.click(NEXT_BUTTON_SELECTOR);
-    await page.waitForNavigation();
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen(98));
 
     // click next month
     let effective_date_tr = page.$('#ctl00_ctl01_MainContentPlaceHolder_T2Main_calEffectiveDate > tbody > tr');
@@ -102,7 +110,8 @@ async function run() {
         await page.waitForSelector('input');
     }
 
-    let today = moment().format('MMMM D');
+    //let today = moment().format('MMMM D');
+    let today = 'February 17';
 
     let indexes = await page.evaluate(today => {
         let trs = document.querySelectorAll('#ctl00_ctl01_MainContentPlaceHolder_T2Main_calEffectiveDate > tbody > tr');
@@ -151,7 +160,27 @@ async function run() {
     await page.click(NEXT_BUTTON_SELECTOR);
     await page.waitForSelector(NEXT_BUTTON_SELECTOR);
 
+    // function for picking the car with the plate number the user provided
+    // fully functional, enable when in production
+    /*
+    let trIndex = await page.evaluate((CREDS) => {
+        let tbody = document.querySelector('#ctl00_ctl01_MainContentPlaceHolder_T2Main_dgVehicleList > tbody');
+        let i;
+        tbody.childNodes.forEach((tr,index) => {
+            tr.childNodes.forEach((td,tdIndex) => {
+                if (td.firstElementChild) {
+                    let innerText = td.firstElementChild.innerText
+                    if (innerText != '' && innerText != CREDS.bkooAddress.carPlate) {
+                        tr.firstElementChild.firstElementChild.click();
+                    }
+                }
+            })
+        })
+    },CREDS);
+    */
+
     // unchecking extra vehicles
+    // remove for production
     await page.click('#ctl00_ctl01_MainContentPlaceHolder_T2Main_dgVehicleList_ctl03_chkChooseVehicles')
         .then(...resolveThen());
     await page.click('#ctl00_ctl01_MainContentPlaceHolder_T2Main_dgVehicleList_ctl04_chkChooseVehicles')
@@ -163,7 +192,7 @@ async function run() {
 
     console.log("Choose the Location")
     // livi, busch, doug, cook
-    await page.select(LOT_INPUT_SELECTOR,lotList.livi);
+    await page.select(LOT_INPUT_SELECTOR,lotList.doug);
     await page.waitForSelector(NEXT_BUTTON_SELECTOR);
     await page.click(NEXT_BUTTON_SELECTOR);
     await page.waitForSelector(PAY_NOW_SELECTOR);
@@ -180,11 +209,11 @@ async function run() {
     console.log("View Cart Pay now 5")
     await page.waitForSelector('input');
     console.log("View Cart Pay now 6")
-    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen(191));
     await page.waitForSelector(CONTINUE_SELECTOR);
     await page.focus(CONTINUE_SELECTOR);
     await page.click(CONTINUE_SELECTOR);
-    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen(195));
     console.log("View Cart Pay now 7")
     /*
     await page.evaluate((contSelector) => {
@@ -197,13 +226,14 @@ async function run() {
     console.log("View Cart Pay now 8")
     console.log("View Cart Pay now 9")
     console.log("Check out process order details")
-    await page.waitForSelector(PAY_WITH_CARD_SELECTOR);
     await page.click(PAY_WITH_CARD_SELECTOR);
     await page.waitForSelector(CARD_TYPE_DROPDOWN_SELECTOR);
     console.log("payment");
     await page.select(CARD_TYPE_DROPDOWN_SELECTOR,'V');
 
     // add code for adding card info & billing address info
+    await page.waitForNavigation({timeout: 5000}).then(...resolveThen(214));
+    await page.waitForNavigation({timeout: 5000}).then(...resolveThen(215));
 
     // CARD INFO
     await page.click(FIRST_NAME_ON_CARD_SELECTOR);
@@ -244,21 +274,54 @@ async function run() {
     await page.select(STATE_DROPDOWN_SELECTOR,'NJ');
 
     // wait to see what i typed REMOVE ON PRODUCTION
-    await page.waitForNavigation({timeout: 5000}).then(...resolveThen());
+    await page.waitForNavigation({timeout: 5000}).then(...resolveThen(256));
 
     await page.focus(CONTINUE_SELECTOR);
     await page.click(CONTINUE_SELECTOR);
 
     console.log('order summary');
 
-    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen(263));
 
     await page.focus(CONTINUE_SELECTOR);
     await page.click(CONTINUE_SELECTOR);
 
     console.log('order confirmation')
+
     
-    await page.waitForNavigation({timeout: 3000}).then(...resolveThen());
+    await page.waitForNavigation({timeout: 3000}).then(...resolveThen(271));
+
+    await page.focus(ACCOUNT_AUTHORIZATION_CHECKBOX_SELECTOR);
+    await page.click(ACCOUNT_AUTHORIZATION_CHECKBOX_SELECTOR);
+
+    await page.focus(ACCOUNT_AUTHORIZATION_EMAIL_ADDRESS_SELECTOR);
+    await page.click(ACCOUNT_AUTHORIZATION_EMAIL_ADDRESS_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.email);
+
+    await page.focus(ACCOUNT_AUTHORIZATION_CONFIRM_EMAIL_ADDRESS_SELECTOR);
+    await page.click(ACCOUNT_AUTHORIZATION_CONFIRM_EMAIL_ADDRESS_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.email);
+
+    await page.focus(ACCOUNT_AUTHORIZATION_FIRST_NAME_SELECTOR);
+    await page.click(ACCOUNT_AUTHORIZATION_FIRST_NAME_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.firstName);
+
+    await page.focus(ACCOUNT_AUTHORIZATION_LAST_NAME_SELECTOR);
+    await page.click(ACCOUNT_AUTHORIZATION_LAST_NAME_SELECTOR);
+    await page.keyboard.type(CREDS.bkooAddress.lastName);
+
+    // If I am testing
+    await page.focus(ACCOUNT_AUTHORIZATION_SUBMIT_ORDER_SELECTOR);
+    // enable in production
+    //await page.click(ACCOUNT_AUTHORIZATION_SUBMIT_ORDER_SELECTOR);
+    console.log('order placed')
+
+    // wait for the loading page
+    await page.waitForNavigation().then(...resolveThen(298));
+
+    // wait for transaction to load  completely
+    await page.waitForNavigation().then(...resolveThen(301));
+
     }
 
 run();
